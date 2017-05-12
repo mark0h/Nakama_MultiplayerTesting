@@ -1,0 +1,5 @@
+ClientDemo.exe
+ClientDemo_Data*
+obj/*
+Library/*
+Temp/*
