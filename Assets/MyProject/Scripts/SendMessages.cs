@@ -37,6 +37,7 @@ public class SendMessages : MonoBehaviour
     private List<byte[]> chatUsersLeftID = new List<byte[]>();
     private HashSet<string> currentChatUsers = new HashSet<string>();
     private bool UserListChange = false;
+    private Func<object, NTopicMessageEventArgs, object> registeredOnTopicMessage;
 
     // Use this for initialization
     void Start()

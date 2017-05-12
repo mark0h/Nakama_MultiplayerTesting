@@ -21,17 +21,21 @@ public class ConnectToServer : MonoBehaviour {
     public bool useSSL = false;
 
     private bool clientConnected = false;
+    private bool clientRegistered = false;
     private byte[] clientID = null;
     private string deviceID;
 
-    //Setting up a match
-    byte[] matchId;          //Saves matchID when client creates a match
+    //Login Panel Objects
+    public Text loginErrorText;
+    private string loginErrorString;
+    public InputField userNameInputField;
+    public InputField passwordInputField;
 
 
     //Debugging Stuff
-    private string outputText = "";
-    public Text OutputTextField;
-    public GameObject loginLabel;
+    //private string outputText = "";
+    //public Text OutputTextField;
+    //public GameObject loginLabel;
 
     #endregion
 
@@ -83,10 +87,10 @@ public class ConnectToServer : MonoBehaviour {
     public void ClientConnect()
     {
 
-        outputText += "";
+        loginErrorString = "";
         if (clientConnected)
         {
-            outputText += "Already connected!\n";
+            loginErrorString = "Already connected!\n";
             return;
         }
 
@@ -103,8 +107,8 @@ public class ConnectToServer : MonoBehaviour {
         }
 
         //TEMP DEBUGGING!
-        Text loginText = loginLabel.GetComponent<Text>();
-        deviceID = loginText.text;
+        //Text loginText = loginLabel.GetComponent<Text>();
+        deviceID = userNameInputField.text;
         Debug.Log("Logging in as: " + deviceID + " to IP: " + ServerIP);
 
         ////Check if registered
@@ -129,7 +133,7 @@ public class ConnectToServer : MonoBehaviour {
         ////Try to Login
         client.Login(request, (INSession session) =>
         {
-            outputText += "Player logged in successfully. ID: " + deviceID.ToString() + "\n";
+            //outputText += "Player logged in successfully. ID: " + deviceID.ToString() + "\n";
             this.session = session;
             ServerInstance.session = session;
             client.Connect(session);
@@ -138,7 +142,7 @@ public class ConnectToServer : MonoBehaviour {
         }, (INError err) =>
         {
             error = err;
-            outputText += "Player failed to login! ID: " + deviceID.ToString() + " Error: " + error.ToString() + "\n";
+            loginErrorString = "Player failed to login! ID: " + deviceID.ToString() + " Error: " + error.ToString() + "\n";
             nakamaEvent.Set();
         });
 
@@ -153,7 +157,7 @@ public class ConnectToServer : MonoBehaviour {
         }
         else
         {
-            outputText += "There was a connection issue: " + error.ToString();
+            loginErrorString = "There was a connection issue: " + error.ToString();
         }
     }
 
@@ -204,6 +208,11 @@ public class ConnectToServer : MonoBehaviour {
     private void UpdateClientSession()
     {
         SendMessages.Singleton.SetClientSession(client, session, deviceID, clientID);
-        SendMessages.Singleton.RegisterOnTopicMessagePresence();
+        if (!clientRegistered)
+        {
+            SendMessages.Singleton.RegisterOnTopicMessagePresence();
+            clientRegistered = true;
+        }
+            
     }
 }
