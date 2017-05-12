@@ -47,8 +47,10 @@
   </ItemGroup>
   <ItemGroup>
      <Compile Include="Assets\MyProject\Scripts\ConnectToServer.cs" />
-     <Compile Include="Assets\MyProject\Scripts\DraggablePanel.cs" />
+     <Compile Include="Assets\MyProject\Scripts\DragPanel.cs" />
      <Compile Include="Assets\MyProject\Scripts\GameEnums.cs" />
+     <Compile Include="Assets\MyProject\Scripts\GameManager.cs" />
+     <Compile Include="Assets\MyProject\Scripts\MinimizeWindow.cs" />
      <Compile Include="Assets\MyProject\Scripts\SendMessages.cs" />
      <Compile Include="Assets\_Nakama\Example\DemoScene.cs" />
      <Compile Include="Assets\_Nakama\Plugins\Nakama\Api.pb.cs" />

@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using Nakama;
 using System.Text;
 using System.Threading;
+using MGR.Creations;
 
 public class ConnectToServer : MonoBehaviour {
 
@@ -29,7 +30,9 @@ public class ConnectToServer : MonoBehaviour {
     public Text loginErrorText;
     private string loginErrorString;
     public InputField userNameInputField;
+    private string userNameString;
     public InputField passwordInputField;
+    public InputField serverIPInputField;
 
 
     //Debugging Stuff
@@ -41,28 +44,26 @@ public class ConnectToServer : MonoBehaviour {
 
     void Awake()
     {
-        // Save a reference to the AudioHandler component as our singleton instance
         ServerInstance = this;
     }
 
     // Use this for initialization
     void Start ()
     {
-        client = new NClient.Builder(ServerKey)
-            .Host(ServerIP)
-            .Port(serverPort)
-            .SSL(useSSL)
-            .Build();        
-
-
         ServerInstance.client = client;
+
+        serverIPInputField.text = ServerIP;
+        Debug.Log("serverIPInputField.text: " + serverIPInputField.text);
+
+        string lastUserName = PlayerPrefs.GetString("UserName");
+        userNameInputField.text = lastUserName;
 
     }
 
     // Update is called once per frame
     void Update()
     {
-        //OutputTextField.text = outputText;
+        loginErrorText.text = loginErrorString;
     }
 
     void OnApplicationQuit()
@@ -79,74 +80,60 @@ public class ConnectToServer : MonoBehaviour {
         client.Disconnect();
     }
 
-    //When using clicks "Connect" button
-    //Does 3 things
-    //1. Tries to register the client(this is so messy!)
-    //2. Tries to log in
-    //3. Tries to connect
-    public void ClientConnect()
+    private void ClientBuilder()
     {
+        client = new NClient.Builder(ServerKey)
+            .Host(ServerIP)
+            .Port(serverPort)
+            .SSL(useSSL)
+            .Build();
+    }
 
-        loginErrorString = "";
-        if (clientConnected)
+    public void ClientRegister()
+    {
+        if(userNameInputField.text.Length < 8)
         {
-            loginErrorString = "Already connected!\n";
+            loginErrorString = "Invalid UserName. Must be at least 8 characters!";
             return;
-        }
-
-        //Allows us to wait until the register check is complete before moving onto login
-        ManualResetEvent nakamaEvent = new ManualResetEvent(false);
-        INError error = null;
-
-        //Get Device Unique ID. If not already in PlayerPrefs, get it from device, and then set PlayerPrefs
-        deviceID = PlayerPrefs.GetString("ID");
-        if (string.IsNullOrEmpty(deviceID))
+        }           
+        if (serverIPInputField.text.Length < 11)
         {
-            deviceID = SystemInfo.deviceUniqueIdentifier;
-            PlayerPrefs.SetString("ID", deviceID);
-        }
+            loginErrorString = "Invalid IP!";
+            return;
+        }            
 
-        //TEMP DEBUGGING!
-        //Text loginText = loginLabel.GetComponent<Text>();
+        ServerIP = serverIPInputField.text;
+
+        ClientBuilder();
+
         deviceID = userNameInputField.text;
         Debug.Log("Logging in as: " + deviceID + " to IP: " + ServerIP);
+        PlayerPrefs.SetString("UserName", deviceID);
 
-        ////Check if registered
+
+        ManualResetEvent registerEvent = new ManualResetEvent(false);
+
+        //Register and connect client
         Debug.Log("Trying to register");
         var request = NAuthenticateMessage.Device(deviceID);
         client.Register(request, (INSession session) =>
         {
-            //clientRegistered = true;
-        }, (INError err) =>
-        {
-            error = err;
-            if (error.Code == ErrorCode.AuthError)
-                Debug.Log("Already registered");
-            //clientRegistered = true;
-            else
-                Debug.LogErrorFormat("ID register '{0}' failed: {1}", deviceID, error);            
-        });
-
-        nakamaEvent.WaitOne(1000, false); //Waiting until Register is complete, pass or fail
-        nakamaEvent.Reset();
-
-        ////Try to Login
-        client.Login(request, (INSession session) =>
-        {
-            //outputText += "Player logged in successfully. ID: " + deviceID.ToString() + "\n";
             this.session = session;
             ServerInstance.session = session;
             client.Connect(session);
             clientConnected = true;
-            nakamaEvent.Set();
+            registerEvent.Set();
         }, (INError err) =>
         {
-            error = err;
-            loginErrorString = "Player failed to login! ID: " + deviceID.ToString() + " Error: " + error.ToString() + "\n";
-            nakamaEvent.Set();
+            if (err.Code == ErrorCode.AuthError)
+                loginErrorString = "This UserName is already registered!";
+            else
+                loginErrorString = "ID register " + deviceID + " failed: " + err;
+
+            registerEvent.Set();
         });
 
-        nakamaEvent.WaitOne(1000, false);
+        registerEvent.WaitOne(1000, false);
 
         if (clientConnected)
         {
@@ -154,10 +141,65 @@ public class ConnectToServer : MonoBehaviour {
             UpdateClientSession();
             UpdateUserInfo();
             JoinDefaultRoom();
+            CompleteLogin();
         }
-        else
+
+    }
+    public void ClientLogin()
+    {
+        if (userNameInputField.text.Length < 10)
         {
-            loginErrorString = "There was a connection issue: " + error.ToString();
+            loginErrorString = "Invalid UserName. Must be at least 10 characters. UserName entered was only " + userNameInputField.text.Length  + " characters";
+            return;
+        }
+        if (serverIPInputField.text.Length < 11)
+        {
+            loginErrorString = "Invalid IP!";
+            return;
+        }
+
+        ServerIP = serverIPInputField.text;
+
+        ClientBuilder();
+
+        deviceID = userNameInputField.text;
+        Debug.Log("Logging in as: " + deviceID + " to IP: " + ServerIP);
+        PlayerPrefs.SetString("UserName", deviceID);
+
+        //Allows us to wait until the register check is complete before moving onto login
+        ManualResetEvent loginEvent = new ManualResetEvent(false);
+
+        ////Try to Login
+        var request = NAuthenticateMessage.Device(deviceID);
+        client.Login(request, (INSession session) =>
+        {
+            if(ServerInstance.session == session)
+            {
+                loginErrorString = "This user is already logged in!";
+                loginEvent.Set();
+                return;
+            }
+            //outputText += "Player logged in successfully. ID: " + deviceID.ToString() + "\n";
+            this.session = session;
+            ServerInstance.session = session;
+            client.Connect(session);
+            clientConnected = true;
+            loginEvent.Set();
+        }, (INError err) =>
+        {
+            loginErrorString = "Player failed to login! ID: " + deviceID.ToString() + " Error: " + err.ToString() + "\n";
+            loginEvent.Set();
+        });
+
+        loginEvent.WaitOne(1000, false);
+
+        if (clientConnected)
+        {
+            FetchClientInfo();
+            UpdateClientSession();
+            UpdateUserInfo();
+            JoinDefaultRoom();
+            CompleteLogin();
         }
     }
 
@@ -203,7 +245,13 @@ public class ConnectToServer : MonoBehaviour {
     public void JoinDefaultRoom()
     {
         SendMessages.Singleton.JoinRoom("default-room");
-    }    
+    }
+
+    private void CompleteLogin()
+    {
+        GameManager.Singleton.HideLoginPanel();
+        GameManager.Singleton.ShowChatAndUserList();
+    }
 
     private void UpdateClientSession()
     {
