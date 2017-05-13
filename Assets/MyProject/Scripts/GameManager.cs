@@ -18,6 +18,9 @@ namespace MGR.Creations
         void Start()
         {
             Singleton = this;
+            LoginPanel.gameObject.SetActive(true);
+            ChatPanel.gameObject.SetActive(false);
+            UserListPanel.gameObject.SetActive(false);
         }
 
         // Update is called once per frame
