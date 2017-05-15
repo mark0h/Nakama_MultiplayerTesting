@@ -52,7 +52,9 @@
      <Compile Include="Assets\MyProject\Scripts\DragPanel.cs" />
      <Compile Include="Assets\MyProject\Scripts\GameEnums.cs" />
      <Compile Include="Assets\MyProject\Scripts\GameManager.cs" />
+     <Compile Include="Assets\MyProject\Scripts\MatchController.cs" />
      <Compile Include="Assets\MyProject\Scripts\MinimizeWindow.cs" />
+     <Compile Include="Assets\MyProject\Scripts\NakamaData.cs" />
      <Compile Include="Assets\MyProject\Scripts\SendMessages.cs" />
      <Compile Include="Assets\SimpleDragAndDrop\Scripts\DummyControlUnit.cs" />
      <Compile Include="Assets\_Nakama\Example\DemoScene.cs" />

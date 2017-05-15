@@ -3,6 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+public enum GameState
+{
+    PlayerTurn,
+    OpponentTurn,
+    WaitingForPlayers,
+}
+
 namespace MGR.Creations
 {
     public class GameManager : MonoBehaviour
@@ -13,6 +20,7 @@ namespace MGR.Creations
         public Transform LoginPanel;
         public Transform ChatPanel;
         public Transform UserListPanel;
+        public Transform MenuPanel;
 
         // Use this for initialization
         void Start()
@@ -21,6 +29,7 @@ namespace MGR.Creations
             LoginPanel.gameObject.SetActive(true);
             ChatPanel.gameObject.SetActive(false);
             UserListPanel.gameObject.SetActive(false);
+            MenuPanel.gameObject.SetActive(false);
         }
 
         // Update is called once per frame
@@ -38,6 +47,7 @@ namespace MGR.Creations
         {
             ChatPanel.gameObject.SetActive(true);
             UserListPanel.gameObject.SetActive(true);
+            MenuPanel.gameObject.SetActive(true);
         }
     }
 }

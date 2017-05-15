@@ -12,12 +12,14 @@ public class ConnectToServer : MonoBehaviour {
     #region
     public static ConnectToServer ServerInstance { get; private set; }
 
+    //private NakamaData nakamaData;
+
     private INClient client;
     private INSession session;    
 
     //Server info
     private static readonly string ServerKey = "defaultkey";
-    public string ServerIP = "35.166.239.83";
+    public string ServerIP = "34.210.109.19";
     public uint serverPort = 7350;
     public bool useSSL = false;
 
@@ -76,7 +78,7 @@ public class ConnectToServer : MonoBehaviour {
         clientConnected = false;
         Debug.Log("Client has disconnected");
         SendMessages.Singleton.LeaveRoom();
-        SendMessages.Singleton.UnRegisterOnTopicMessagePresence();
+        //SendMessages.Singleton.UnRegisterOnTopicMessagePresence();
         client.Disconnect();
     }
 
@@ -87,6 +89,8 @@ public class ConnectToServer : MonoBehaviour {
             .Port(serverPort)
             .SSL(useSSL)
             .Build();
+
+        NakamaData.Singleton.Client = client;
     }
 
     public void ClientRegister()
@@ -122,6 +126,7 @@ public class ConnectToServer : MonoBehaviour {
             ServerInstance.session = session;
             client.Connect(session);
             clientConnected = true;
+            NakamaData.Singleton.Session = session;
             registerEvent.Set();
         }, (INError err) =>
         {
@@ -184,6 +189,7 @@ public class ConnectToServer : MonoBehaviour {
             ServerInstance.session = session;
             client.Connect(session);
             clientConnected = true;
+            NakamaData.Singleton.Session = session;
             loginEvent.Set();
         }, (INError err) =>
         {
@@ -256,11 +262,11 @@ public class ConnectToServer : MonoBehaviour {
     private void UpdateClientSession()
     {
         SendMessages.Singleton.SetClientSession(client, session, deviceID, clientID);
-        if (!clientRegistered)
-        {
-            SendMessages.Singleton.RegisterOnTopicMessagePresence();
-            clientRegistered = true;
-        }
+        //if (!clientRegistered)
+        //{
+        //    SendMessages.Singleton.RegisterOnTopicMessagePresence();
+        //    clientRegistered = true;
+        //}
             
     }
 }
