@@ -37,16 +37,6 @@ public class NakamaData : MonoBehaviour {
         get { return _clientID; }
     }
 
-    private string _deviceID;
-    public string DeviceID
-    {
-        set
-        {
-            _deviceID = value;
-        }
-        get { return _deviceID; }
-    }
-
     private string _clientUserName;
     public string ClientUserName
     {

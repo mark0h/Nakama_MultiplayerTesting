@@ -46,13 +46,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-     <Compile Include="Assets\MyProject\Scripts\CardControll\DragAndDropCell.cs" />
-     <Compile Include="Assets\MyProject\Scripts\CardControll\DragAndDropItem.cs" />
+     <Compile Include="Assets\MyProject\Scripts\CardControl\DragAndDropCell.cs" />
+     <Compile Include="Assets\MyProject\Scripts\CardControl\DragAndDropItem.cs" />
      <Compile Include="Assets\MyProject\Scripts\ConnectToServer.cs" />
      <Compile Include="Assets\MyProject\Scripts\DragPanel.cs" />
      <Compile Include="Assets\MyProject\Scripts\GameEnums.cs" />
      <Compile Include="Assets\MyProject\Scripts\GameManager.cs" />
      <Compile Include="Assets\MyProject\Scripts\MatchController.cs" />
+     <Compile Include="Assets\MyProject\Scripts\MatchListButton.cs" />
      <Compile Include="Assets\MyProject\Scripts\MinimizeWindow.cs" />
      <Compile Include="Assets\MyProject\Scripts\NakamaData.cs" />
      <Compile Include="Assets\MyProject\Scripts\SendMessages.cs" />

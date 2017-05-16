@@ -15,20 +15,22 @@ public class ConnectToServer : MonoBehaviour {
     //private NakamaData nakamaData;
 
     private INClient client;
-    private INSession session;    
+    private INSession session;
 
     //Server info
+    [Header("Server Settings")]
     private static readonly string ServerKey = "defaultkey";
     public string ServerIP = "34.210.109.19";
     public uint serverPort = 7350;
     public bool useSSL = false;
 
     private bool clientConnected = false;
-    private bool clientRegistered = false;
     private byte[] clientID = null;
     private string deviceID;
 
     //Login Panel Objects
+    [Header("Login Panel")]
+    public Transform LoginPanel;
     public Text loginErrorText;
     private string loginErrorString;
     public InputField userNameInputField;
@@ -36,6 +38,11 @@ public class ConnectToServer : MonoBehaviour {
     public InputField passwordInputField;
     public InputField serverIPInputField;
 
+    //Login Panel Objects
+    [Header("Game Panels")]
+    public Transform ChatPanel;
+    public Transform UserListPanel;
+    public Transform MenuPanel;
 
     //Debugging Stuff
     //private string outputText = "";
@@ -52,6 +59,11 @@ public class ConnectToServer : MonoBehaviour {
     // Use this for initialization
     void Start ()
     {
+
+        ChatPanel.gameObject.SetActive(false);
+        UserListPanel.gameObject.SetActive(false);
+        MenuPanel.gameObject.SetActive(false);
+
         ServerInstance.client = client;
 
         serverIPInputField.text = ServerIP;
@@ -59,6 +71,8 @@ public class ConnectToServer : MonoBehaviour {
 
         string lastUserName = PlayerPrefs.GetString("UserName");
         userNameInputField.text = lastUserName;
+
+        LoginPanel.gameObject.SetActive(true);
 
     }
 
@@ -143,7 +157,6 @@ public class ConnectToServer : MonoBehaviour {
         if (clientConnected)
         {
             FetchClientInfo();
-            UpdateClientSession();
             UpdateUserInfo();
             JoinDefaultRoom();
             CompleteLogin();
@@ -202,7 +215,6 @@ public class ConnectToServer : MonoBehaviour {
         if (clientConnected)
         {
             FetchClientInfo();
-            UpdateClientSession();
             UpdateUserInfo();
             JoinDefaultRoom();
             CompleteLogin();
@@ -230,8 +242,7 @@ public class ConnectToServer : MonoBehaviour {
 
     private void UpdateUserInfo()
     {
-
-        //ManualResetEvent nakamaEvent = new ManualResetEvent(false);
+        NakamaData.Singleton.ClientUserName = deviceID;
 
         Debug.Log("Updating User Info");
         var message = new NSelfUpdateMessage.Builder()
@@ -251,22 +262,14 @@ public class ConnectToServer : MonoBehaviour {
     public void JoinDefaultRoom()
     {
         SendMessages.Singleton.JoinRoom("default-room");
+        MatchController.Singleton.JoinMatchRoom();
     }
 
     private void CompleteLogin()
     {
-        GameManager.Singleton.HideLoginPanel();
-        GameManager.Singleton.ShowChatAndUserList();
-    }
-
-    private void UpdateClientSession()
-    {
-        SendMessages.Singleton.SetClientSession(client, session, deviceID, clientID);
-        //if (!clientRegistered)
-        //{
-        //    SendMessages.Singleton.RegisterOnTopicMessagePresence();
-        //    clientRegistered = true;
-        //}
-            
+        LoginPanel.gameObject.SetActive(false);
+        ChatPanel.gameObject.SetActive(true);
+        UserListPanel.gameObject.SetActive(true);
+        MenuPanel.gameObject.SetActive(true);
     }
 }

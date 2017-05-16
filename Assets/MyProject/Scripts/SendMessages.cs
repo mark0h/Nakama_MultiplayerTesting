@@ -9,16 +9,20 @@ using System.Threading;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+
+[Serializable]
+public class MessageClass
+{
+    public string messageText;
+}
+
 public class SendMessages : MonoBehaviour
 {
 
     public static SendMessages Singleton;
 
-    private NakamaData nakamaData;
-
     private INClient client;
     private byte[] clientID = null;
-    private INSession session;
     private INTopicId currentTopic;
     private IList<INUserPresence> userList = new List<INUserPresence>();
 
@@ -81,14 +85,6 @@ public class SendMessages : MonoBehaviour
         {
             allowSend = chatInputBox.isFocused;
         }
-    }
-
-    public void SetClientSession(INClient newClient, INSession newSession, string clientUserValue, byte[] clientIDValue)
-    {
-        //client = newClient;
-        //session = newSession;
-        clientUserName = clientUserValue;
-        clientID = clientIDValue;
     }
 
     //Will join a room for the client, and update that room's userlist for all clients
@@ -155,6 +151,7 @@ public class SendMessages : MonoBehaviour
     public void SendChatMessage()
     {
         client = NakamaData.Singleton.Client;
+        clientUserName = NakamaData.Singleton.ClientUserName;
 
         if (chatInputBox.text == "")
             return;
@@ -162,7 +159,7 @@ public class SendMessages : MonoBehaviour
         ManualResetEvent sendMessage = new ManualResetEvent(false);
         chatInputText = chatInputBox.text;
         chatInputBox.text = "";
-        string chatMessage = "{\"Data\": \"[" + clientUserName + " " + DateTime.Now.ToString("HH:mm:ss") + "] " + chatInputText + "\"}";
+        string chatMessage = "{\"messageText\": \"[" + clientUserName + " " + DateTime.Now.ToString("HH:mm:ss") + "] " + chatInputText + "\"}";
         NTopicMessageSendMessage msg = NTopicMessageSendMessage.Default(currentTopic, Encoding.UTF8.GetBytes(chatMessage));
         client.Send(msg, (INTopicMessageAck ack) =>
         {
@@ -175,7 +172,7 @@ public class SendMessages : MonoBehaviour
 
         sendMessage.WaitOne(1000, false);      
 
-    }
+    }    
 
     /// <summary>
     /// OnTopMessage and OnTopPresence Registering
@@ -183,9 +180,9 @@ public class SendMessages : MonoBehaviour
     /// 
     void c_OnTopicMessage(object sender, NTopicMessageEventArgs e)
     {
-        string chatValue = Encoding.UTF8.GetString(e.Message.Data).Substring(10);
-        chatValue = chatValue.Substring(0, chatValue.Length - 2);
-        chatText.Add(chatValue);
+        var bytesAsString = Encoding.ASCII.GetString(e.Message.Data);
+        var chatJson = JsonUtility.FromJson<MessageClass>(bytesAsString);
+        chatText.Add(chatJson.messageText);
     }
 
     void c_OnTopicPresence(object source, NTopicPresenceEventArgs args)
@@ -222,6 +219,7 @@ public class SendMessages : MonoBehaviour
 
     public void RegisterOnTopicMessagePresence()
     {
+        clientID = NakamaData.Singleton.ClientID;
         client.OnTopicMessage += c_OnTopicMessage;
         client.OnTopicPresence += c_OnTopicPresence;
     }
