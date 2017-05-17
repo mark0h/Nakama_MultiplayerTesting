@@ -20,7 +20,13 @@ namespace MGR.Creations
         [Header("Gameplay Panel")]
         public Transform GamePlayPanel;
         public Transform InfoFlashPanel;
+        public Transform BlockActionPanel;
         private CanvasGroup InfoFlashCG;
+
+        [Header("GameOVer Panel")]
+        public Transform EndGameResultsPanel;
+        public Transform EndGamePlayerPanel;
+        public Transform EndGameOppNamePanel;
 
         [Header("Opponent Objects")]
         public Text opponentNameText;
@@ -58,6 +64,7 @@ namespace MGR.Creations
             InfoFlashCG = InfoFlashPanel.GetComponentInChildren<CanvasGroup>();
 
             GamePlayPanel.gameObject.SetActive(false);
+            EndGameResultsPanel.gameObject.SetActive(false);
         }
 
         // Update is called once per frame
@@ -88,6 +95,7 @@ namespace MGR.Creations
         public void StartNewGamePlay(string gameName, string opponent = "")
         {
             GamePlayPanel.gameObject.SetActive(true);
+            InfoFlashPanel.gameObject.SetActive(true);
             _playerName = NakamaData.Singleton.ClientUserName;
 
             playerNameText.text = _playerName;
@@ -107,19 +115,48 @@ namespace MGR.Creations
 
             
             StartCoroutine(ShowInfoFlashPanel());
+            BlockActionPanel.gameObject.SetActive(false);
+        }
+
+        public void QuitCurrentGameMatch(string endGameText)
+        {
+            EndGameResultsPanel.gameObject.SetActive(true);
+            BlockActionPanel.gameObject.SetActive(true);
+
+            Text endGameInfo = EndGameResultsPanel.FindChild("EndGameInfoText").GetComponent<Text>();
+            Text playerNameText = EndGamePlayerPanel.FindChild("PlayerNameText").GetComponent<Text>();
+            Text playerScore = EndGamePlayerPanel.FindChild("PlayerScore").GetComponent<Text>();
+            Text playerDamage = EndGamePlayerPanel.FindChild("PlayerDamage").GetComponent<Text>();
+            Text playerHealth = EndGamePlayerPanel.FindChild("PlayerHealth").GetComponent<Text>();
+
+            endGameInfo.text = endGameText;
+            playerNameText.text = NakamaData.Singleton.ClientUserName;
+            playerScore.text = "144";
+        }
+
+        public void UpdateInfoFlashPanelMessage(string message)
+        {
+            InfoFlashPanel.GetComponentInChildren<Text>().text = message;
+            StartCoroutine(ShowInfoFlashPanel());
         }
 
         private IEnumerator ShowInfoFlashPanel()
         {
-            InfoFlashCG.alpha = 2f;
+            InfoFlashCG.alpha = 1f;
 
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(2f);
 
             while(InfoFlashCG.alpha > 0)
             {
                 InfoFlashCG.alpha -= 0.05f;
                 yield return new WaitForSeconds(0.05f);
             }
+        }
+
+        public void CloseEndGameResultsPanel()
+        {
+            EndGameResultsPanel.gameObject.SetActive(false);
+            GamePlayPanel.gameObject.SetActive(false);
         }
 
     }

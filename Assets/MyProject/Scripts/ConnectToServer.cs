@@ -261,6 +261,7 @@ public class ConnectToServer : MonoBehaviour {
 
     public void JoinDefaultRoom()
     {
+        Debug.Log("ConnectToServer:: ::JoinDefaultRoom()");
         SendMessages.Singleton.JoinRoom("default-room");
         MatchController.Singleton.JoinMatchRoom();
     }

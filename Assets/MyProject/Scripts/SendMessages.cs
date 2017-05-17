@@ -96,7 +96,7 @@ public class SendMessages : MonoBehaviour
         var message = new NTopicJoinMessage.Builder().TopicRoom(Encoding.UTF8.GetBytes(roomName)).Build();
         client.Send(message, (INTopic topic) =>
         {
-            chatText.Add("Successfully joined the Default Room." + " There are currently " + topic.Presences.Count + " Users");
+            chatText.Add("Successfully joined the room '" + roomName + "'. There are currently " + topic.Presences.Count + " Users");
             userList = topic.Presences;
             currentTopic = topic.Topic;
             joinEvent.Set();
@@ -187,6 +187,7 @@ public class SendMessages : MonoBehaviour
 
     void c_OnTopicPresence(object source, NTopicPresenceEventArgs args)
     {
+        Debug.Log("source: " + source + " args.TopicPresence: " + args.TopicPresence);
         ManualResetEvent updateEvent = new ManualResetEvent(false);
         if (args.TopicPresence.Join.Count > 0)
         {

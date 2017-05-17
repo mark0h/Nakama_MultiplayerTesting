@@ -12,10 +12,10 @@ using System.Text;
 [Serializable]
 public class MatchRoomClass
 {
+    public string addRemove;
     public string matchName;
     public string userName;
-    public string matchID;
-    public Guid matchIDGUID;
+    public string matchIDGUID;
 }
 
 public class MatchController : MonoBehaviour {
@@ -72,6 +72,7 @@ public class MatchController : MonoBehaviour {
         }           
     }
 
+    //Create Match Button Pressed
     public void CreateandJoinMatch()
     {
         if(createdMatchNameInput.text.Length < 10 || createdMatchNameInput.text.Length > 30)
@@ -79,6 +80,8 @@ public class MatchController : MonoBehaviour {
             createMatchPanelErrorText.text = "Invalid match name! Must be between 10 and 30 characters. Currently only " + createdMatchNameInput.text.Length + " characters.";
             return;
         }
+
+        Debug.Log("Creating a Match!!  Name: " + createdMatchNameInput.text);
 
         matchName = createdMatchNameInput.text;
 
@@ -107,7 +110,9 @@ public class MatchController : MonoBehaviour {
 
         createEvent.WaitOne(5000, false);
         createMatchPanel.gameObject.SetActive(false);
-        SendMatchInfoToMatchRoom();
+        SendMatchInfoToMatchRoom("add");
+        SendMessages.Singleton.LeaveRoom();
+        SendMessages.Singleton.JoinRoom(matchName);
         GameManager.Singleton.StartNewGamePlay(createdMatchNameInput.text);
     }
 
@@ -137,23 +142,18 @@ public class MatchController : MonoBehaviour {
         joinEvent.WaitOne(1000, false);
         RegisterMatchListRoom();
     }
-    private void SendMatchInfoToMatchRoom()
+    private void SendMatchInfoToMatchRoom(string addRemove)
     {
         client = NakamaData.Singleton.Client;
         ManualResetEvent sendMessage = new ManualResetEvent(false);
+        Guid matchID_Guid = new Guid(matchID);
 
-        //    public string matchName;
-        //public string userName;
-        //public byte[] matchID;
-        //{"level":1,"timeElapsed":47.5,"playerName":"Dr Charles Francis"}
+        //Debug.LogWarning("Encoding.UTF8.GetString(matchID): " + Encoding.UTF8.GetString(matchID));
+        //Guid test = new Guid(matchID);
 
-        Debug.LogWarning("Encoding.UTF8.GetString(matchID): " + Encoding.UTF8.GetString(matchID));
-        Guid test = new Guid(matchID);
-
-        string chatMessage = "{\"matchName\":\"" + matchName + "\",\"userName\":\"" + NakamaData.Singleton.ClientUserName + "\",\"matchIDGUID\":\"" + test + "\"}";
-        Debug.LogWarning("chatMessage for Match Info: " + chatMessage);
-        Debug.LogWarning("DEBUG:::: chatJson.matchIDGUID: " + test + " chatJson.matchIDGUID..ToByteArray(): " + test.ToByteArray() + " Encoding.UTF8.GetString(matchID)" + Encoding.UTF8.GetString(matchID));
-        Debug.LogWarning("DEBUG:::: Encoding.UTF8.GetString(test.ToByteArray()): " + Encoding.UTF8.GetString(test.ToByteArray()) + " Encoding.UTF8.GetString(matchID)" + Encoding.UTF8.GetString(matchID));
+        string chatMessage = "{\"addRemove\":\"" + addRemove + "\",\"matchName\":\"" + matchName + "\",\"userName\":\"" + NakamaData.Singleton.ClientUserName + "\",\"matchIDGUID\":\"" + matchID_Guid.ToString() + "\"}";
+        //Debug.LogWarning("DEBUG:::: chatJson.matchIDGUID: " + test + " chatJson.matchIDGUID..ToByteArray(): " + test.ToByteArray() + " Encoding.UTF8.GetString(matchID)" + Encoding.UTF8.GetString(matchID));
+        //Debug.LogWarning("DEBUG:::: Encoding.UTF8.GetString(test.ToByteArray()): " + Encoding.UTF8.GetString(test.ToByteArray()) + " Encoding.UTF8.GetString(matchID)" + Encoding.UTF8.GetString(matchID));
         NTopicMessageSendMessage msg = NTopicMessageSendMessage.Default(matchListTopic, Encoding.UTF8.GetBytes(chatMessage));
         client.Send(msg, (INTopicMessageAck ack) =>
         {
@@ -170,12 +170,6 @@ public class MatchController : MonoBehaviour {
     //Called when "Join Game" button on game menu is pressed
     public void SetupMatchListPanel()
     {
-
-        //TEMP FOR DEBUGGING
-        //matchNameUserList.Add("Join My Awesome Game Yea Yea!!", "ThisUserYea!");
-        //matchNameUserList.Add("Fight me Buddy!", "Markoooo123");
-        //matchNameUserList.Add("Another Match, come on!", "DemonKingYA!");
-
         //Add Buttons of Current matches
         foreach (var pair in matchNameUserList)
         {
@@ -187,6 +181,52 @@ public class MatchController : MonoBehaviour {
 
         matchListPanel.gameObject.SetActive(true);
 
+    }
+
+    //Called when "Join Match" is clicked in the Match List Panel
+    public void JoinMatch()
+    {
+        Debug.Log("Joining the match: " + matchName);
+
+        ManualResetEvent joinEvent = new ManualResetEvent(false);
+        matchID = matchNameByteList[matchName];
+        string opponentName = matchNameUserList[matchName];
+        client = NakamaData.Singleton.Client;
+        client.Send(NMatchJoinMessage.Default(matchID), (INMatch match) =>
+        {
+            joinEvent.Set();
+        }, (INError err) =>
+        {
+            Debug.Log("Failed to Join match. Error: " + err);
+            joinEvent.Set();
+        });
+
+        joinEvent.WaitOne(1000, false);
+        SendMatchInfoToMatchRoom("remove");
+        SendMessages.Singleton.LeaveRoom();
+        SendMessages.Singleton.JoinRoom(matchName);
+        GameManager.Singleton.StartNewGamePlay(matchName, opponentName);
+    }
+
+    public void QuitMatch()
+    {
+        Debug.LogWarning("Quitting Match");
+        ManualResetEvent quitEvent = new ManualResetEvent(false);
+        client = NakamaData.Singleton.Client;
+        client.Send(NMatchLeaveMessage.Default(matchID), (bool complete) =>
+        {
+            Debug.LogWarning("Successfully Quit Match");
+        }, (INError err) =>
+        {
+            Debug.LogWarning("Could not quit match. Error: " + err);
+            quitEvent.Set();
+        });
+        quitEvent.WaitOne(1000, false);
+        SendMatchInfoToMatchRoom("remove");
+        UnRegisterOnMatchData();
+        SendMessages.Singleton.LeaveRoom();
+        SendMessages.Singleton.JoinRoom("default-room");
+        GameManager.Singleton.QuitCurrentGameMatch(NakamaData.Singleton.ClientUserName + " left the match");
     }
 
     //Called when a Match listed in the MatchListScroll is pressed
@@ -210,6 +250,16 @@ public class MatchController : MonoBehaviour {
         createMatchPanel.gameObject.SetActive(false);
     }
 
+    //Called when X button on panel is pressed
+    public void CloseMatchListPanel()
+    {
+        foreach (Transform child in matchListScrollContent)
+        {
+            GameObject.Destroy(child.gameObject);
+        }
+        matchListPanel.gameObject.SetActive(false);
+    }
+
 
     ///<summary>
     ///The following is for registering an unregistering Matches
@@ -220,31 +270,74 @@ public class MatchController : MonoBehaviour {
         
     }
 
+    void c_OnMatchPresence(object source, NMatchPresenceEventArgs args)
+    {
+        if(args.MatchPresence.Leave.Count > 0)
+        {
+            GameManager.Singleton.UpdateInfoFlashPanelMessage("Opponenet has left. You win!!!");
+        }
+    }
+
     void MatchList_OnTopicMessage(object sender, NTopicMessageEventArgs e)
-    {        
+    {
+        ManualResetEvent updateEvent = new ManualResetEvent(false);
+
         var bytesAsString = Encoding.ASCII.GetString(e.Message.Data);
         var chatJson = JsonUtility.FromJson<MatchRoomClass>(bytesAsString);
-        matchNameByteList.Add(chatJson.matchName, Encoding.UTF8.GetBytes(chatJson.matchID));
-        matchNameUserList.Add(chatJson.matchName, chatJson.userName);
+        Guid tempMatchID = new Guid(chatJson.matchIDGUID);
 
-        Debug.LogWarning("DEBUG:::: chatJson.matchIDGUID: " + chatJson.matchIDGUID + "chatJson.matchIDGUID.ToString: " + chatJson.matchIDGUID.ToString() + " Encoding.UTF8.GetString(matchID)" + Encoding.UTF8.GetString(matchID));
+        if (chatJson.addRemove == "add")
+        {
+            Debug.Log("Adding match");
+            matchNameByteList.Add(chatJson.matchName, tempMatchID.ToByteArray());
+            matchNameUserList.Add(chatJson.matchName, chatJson.userName);
+            Debug.Log("Added match matchNameByteList.Count: " + matchNameByteList.Count + " matchNameUserList.Count: " + matchNameUserList.Count);
+            updateEvent.Set();
+        } else
+        {
+            Debug.Log("Removing match matchNameByteList.Count: " + matchNameByteList.Count + " matchNameUserList.Count: " + matchNameUserList.Count);
+            matchNameByteList.Remove(chatJson.matchName);
+            matchNameUserList.Remove(chatJson.matchName);
+            Debug.Log("Removed match matchNameByteList.Count: " + matchNameByteList.Count + " matchNameUserList.Count: " + matchNameUserList.Count);
+            updateEvent.Set();
+        }
+        updateEvent.WaitOne(1000, false);
     }
 
     public void RegisterOnMatchData()
     {
         client = NakamaData.Singleton.Client;
         client.OnMatchData += c_OnMatchData;
+        client.OnMatchPresence += c_OnMatchPresence;
     }
 
     public void UnRegisterOnMatchData()
     {
         client = NakamaData.Singleton.Client;
         client.OnMatchData -= c_OnMatchData;
+        client.OnMatchPresence -= c_OnMatchPresence;
     }
 
     public void RegisterMatchListRoom()
     {
         client = NakamaData.Singleton.Client;
         client.OnTopicMessage += MatchList_OnTopicMessage;
+    }
+
+    public void UnRegisterMatchListRoom()
+    {
+        client = NakamaData.Singleton.Client;
+        client.OnTopicMessage -= MatchList_OnTopicMessage;
+    }
+
+    public void SendMatchData(int opCode, byte[] data)
+    {
+        var message = NMatchDataSendMessage.Default(matchID, opCode, data);
+        client.Send(message, (bool complete) =>
+        {
+            Debug.Log("Successfully sent data to match.");
+        }, (INError error) => {
+            Debug.LogErrorFormat("Could not send data to match: '{0}'.", error.Message);
+        });
     }
 }
