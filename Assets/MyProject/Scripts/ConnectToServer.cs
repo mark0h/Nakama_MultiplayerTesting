@@ -20,7 +20,7 @@ public class ConnectToServer : MonoBehaviour {
     //Server info
     [Header("Server Settings")]
     private static readonly string ServerKey = "defaultkey";
-    public string ServerIP = "34.210.109.19";
+    public string ServerIP;
     public uint serverPort = 7350;
     public bool useSSL = false;
 
@@ -238,6 +238,8 @@ public class ConnectToServer : MonoBehaviour {
         });
 
         nakamaEvent.WaitOne(1000, false);
+        NakamaData.Singleton.ClientID = clientID;
+        Debug.Log("FetchClientInfo():: ClientID: " + clientID);
     }
 
     private void UpdateUserInfo()
@@ -270,7 +272,7 @@ public class ConnectToServer : MonoBehaviour {
     {
         LoginPanel.gameObject.SetActive(false);
         ChatPanel.gameObject.SetActive(true);
-        UserListPanel.gameObject.SetActive(true);
+        //UserListPanel.gameObject.SetActive(true);
         MenuPanel.gameObject.SetActive(true);
     }
 

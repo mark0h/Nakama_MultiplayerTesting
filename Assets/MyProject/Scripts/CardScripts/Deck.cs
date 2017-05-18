@@ -71,7 +71,6 @@ public class Deck : MonoBehaviour {
     public CardValue DrawCard()
     {
         int cardSelect = deckCards.Count - 1;
-        Debug.Log("CardSelect Index value: " + cardSelect);
 
         CardValue cardSelected = deckCards[cardSelect];
         deckCards.RemoveAt(cardSelect);

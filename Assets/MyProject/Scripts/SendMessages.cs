@@ -97,6 +97,7 @@ public class SendMessages : MonoBehaviour
         client.Send(message, (INTopic topic) =>
         {
             chatText.Add("Successfully joined the room '" + roomName + "'. There are currently " + topic.Presences.Count + " Users");
+            Debug.Log("Successfully Joined Room");
             userList = topic.Presences;
             currentTopic = topic.Topic;
             joinEvent.Set();
@@ -107,14 +108,17 @@ public class SendMessages : MonoBehaviour
         });
 
         joinEvent.WaitOne(1000, false);
+
+        //Create the user list to display
         foreach (var userInList in userList)
         {
             if (!chatUsersJoinedID.Contains(userInList.UserId))
                 chatUsersJoinedID.Add(userInList.UserId);
         }
+
         Debug.Log("JoinRoom::  ::chatUsersJoinedID.count: " + chatUsersJoinedID.Count);
 
-        UserListChange = true;
+        UserListChange = true;   //Run update to update UserList
         RegisterOnTopicMessagePresence();
     }
 

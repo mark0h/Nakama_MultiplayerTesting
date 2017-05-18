@@ -34,6 +34,32 @@ public class GameData : MonoBehaviour {
         get { return _oppScore; }
     }
 
+    private int _playerDamage;
+    public int PlayerDamage
+    {
+        set { _playerDamage = value; }
+        get { return _playerDamage; }
+    }
+    private int _oppDamage;
+    public int OpponentDamage
+    {
+        set { _oppDamage = value; }
+        get { return _oppDamage; }
+    }
+
+    private int _playerDamageTaken;
+    public int PlayerDamageTaken
+    {
+        set { _playerDamageTaken = value; }
+        get { return _playerDamageTaken; }
+    }
+    private int _oppDamageTaken;
+    public int OpponentDamageTaken
+    {
+        set { _oppDamageTaken = value; }
+        get { return _oppDamageTaken; }
+    }
+
 
     // Use this for initialization
     void Start ()

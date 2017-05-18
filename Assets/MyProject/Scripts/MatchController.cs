@@ -16,6 +16,14 @@ public class MatchRoomClass
     public string matchName;
     public string userName;
     public string matchIDGUID;
+    public string matchMaxHealth;
+}
+
+[Serializable]
+public class MatchSettings
+{
+    public string matchCreator;
+    public string maxHealth;
 }
 
 public class MatchController : MonoBehaviour {
@@ -26,7 +34,7 @@ public class MatchController : MonoBehaviour {
     private INTopicId matchListTopic;
     private INMatch matchValues;
     private Dictionary<string, byte[]> matchNameByteList = new Dictionary<string, byte[]>();
-    private Dictionary<string, string> matchNameUserList = new Dictionary<string, string>();
+    private Dictionary<string, MatchSettings> matchNameUserList = new Dictionary<string, MatchSettings>();
 
     //GameObjects Create Match Panel
     [Header("Create Match Panel")]
@@ -43,6 +51,7 @@ public class MatchController : MonoBehaviour {
     public Transform matchListScrollContent;
     public InputField matchNameInput;
     public Text opponentName;
+    public Text maxHealth;
 
     public GameObject buttonPrefab;
 
@@ -50,6 +59,11 @@ public class MatchController : MonoBehaviour {
     private string matchName;
     private byte[] matchID;
     private bool updateMatchName = false;
+    private bool opponentQuit = false;
+
+    private int opCode;
+    private string dataValue;
+    private bool dataRecieved = false;    //To get out of the Nakama OnMatchData thread
 
     //TEMP DEBUGGIN
     //private byte[] testByte = { 1, 2, 3 };
@@ -71,7 +85,20 @@ public class MatchController : MonoBehaviour {
         {
             matchNameInput.text = matchName;
             updateMatchName = false;
-        }           
+        }
+
+        if (opponentQuit)
+        {
+            GameManager.Singleton.OpponentQuit();
+            opponentQuit = false;
+        }
+            
+
+        if (dataRecieved)
+        {
+            ReadSentData(opCode, dataValue);
+            dataRecieved = false;
+        }
     }
 
     //Create Match Button Pressed
@@ -112,7 +139,7 @@ public class MatchController : MonoBehaviour {
 
         createEvent.WaitOne(5000, false);
         createMatchPanel.gameObject.SetActive(false);
-        SendMatchInfoToMatchRoom("add");
+        SendMatchInfoToMatchRoom("add", Convert.ToInt32(maxHealthSlider.value));
         SendMessages.Singleton.LeaveRoom();
         SendMessages.Singleton.JoinRoom(matchName);
         GameManager.Singleton.StartNewGamePlay(createdMatchNameInput.text, Convert.ToInt32(maxHealthSlider.value));
@@ -144,7 +171,7 @@ public class MatchController : MonoBehaviour {
         joinEvent.WaitOne(1000, false);
         RegisterMatchListRoom();
     }
-    private void SendMatchInfoToMatchRoom(string addRemove)
+    private void SendMatchInfoToMatchRoom(string addRemove, int maxHealth)
     {
         client = NakamaData.Singleton.Client;
         ManualResetEvent sendMessage = new ManualResetEvent(false);
@@ -153,13 +180,13 @@ public class MatchController : MonoBehaviour {
         //Debug.LogWarning("Encoding.UTF8.GetString(matchID): " + Encoding.UTF8.GetString(matchID));
         //Guid test = new Guid(matchID);
 
-        string chatMessage = "{\"addRemove\":\"" + addRemove + "\",\"matchName\":\"" + matchName + "\",\"userName\":\"" + NakamaData.Singleton.ClientUserName + "\",\"matchIDGUID\":\"" + matchID_Guid.ToString() + "\"}";
+        string chatMessage = "{\"addRemove\":\"" + addRemove + "\",\"matchName\":\"" + matchName + "\",\"userName\":\"" + NakamaData.Singleton.ClientUserName + "\",\"matchIDGUID\":\"" + matchID_Guid.ToString() + "\",\"matchMaxHealth\":\"" + maxHealth + "\"}";
         //Debug.LogWarning("DEBUG:::: chatJson.matchIDGUID: " + test + " chatJson.matchIDGUID..ToByteArray(): " + test.ToByteArray() + " Encoding.UTF8.GetString(matchID)" + Encoding.UTF8.GetString(matchID));
         //Debug.LogWarning("DEBUG:::: Encoding.UTF8.GetString(test.ToByteArray()): " + Encoding.UTF8.GetString(test.ToByteArray()) + " Encoding.UTF8.GetString(matchID)" + Encoding.UTF8.GetString(matchID));
         NTopicMessageSendMessage msg = NTopicMessageSendMessage.Default(matchListTopic, Encoding.UTF8.GetBytes(chatMessage));
         client.Send(msg, (INTopicMessageAck ack) =>
         {
-            Debug.Log("Match Data being sent: " + chatMessage);
+            Debug.Log("Match Room Data being sent: " + chatMessage);
             sendMessage.Set();
         }, (INError error) =>
         {
@@ -189,10 +216,12 @@ public class MatchController : MonoBehaviour {
     public void JoinMatch()
     {
         Debug.Log("Joining the match: " + matchName);
+        RegisterOnMatchData();
 
         ManualResetEvent joinEvent = new ManualResetEvent(false);
         matchID = matchNameByteList[matchName];
-        string opponentName = matchNameUserList[matchName];
+        string opponentName = matchNameUserList[matchName].matchCreator;
+        string maxHealth = matchNameUserList[matchName].maxHealth;
         client = NakamaData.Singleton.Client;
         client.Send(NMatchJoinMessage.Default(matchID), (INMatch match) =>
         {
@@ -204,10 +233,11 @@ public class MatchController : MonoBehaviour {
         });
 
         joinEvent.WaitOne(1000, false);
-        SendMatchInfoToMatchRoom("remove");
+        SendMatchInfoToMatchRoom("remove", 0);
         SendMessages.Singleton.LeaveRoom();
         SendMessages.Singleton.JoinRoom(matchName);
-        GameManager.Singleton.StartNewGamePlay(matchName, Convert.ToInt32(maxHealthSlider.value), opponentName);
+        GameManager.Singleton.StartNewGamePlay(matchName, Convert.ToInt32(maxHealth), opponentName);
+        matchListPanel.gameObject.SetActive(false);
     }
 
     public void QuitMatch()
@@ -224,7 +254,7 @@ public class MatchController : MonoBehaviour {
             quitEvent.Set();
         });
         quitEvent.WaitOne(1000, false);
-        SendMatchInfoToMatchRoom("remove");
+        SendMatchInfoToMatchRoom("remove", 0);
         UnRegisterOnMatchData();
         SendMessages.Singleton.LeaveRoom();
         SendMessages.Singleton.JoinRoom("default-room");
@@ -235,7 +265,8 @@ public class MatchController : MonoBehaviour {
     public void MatchListButtonPressed()
     {
         matchName = EventSystem.current.currentSelectedGameObject.name;
-        opponentName.text = matchNameUserList[matchName];
+        opponentName.text = matchNameUserList[matchName].matchCreator;
+        maxHealth.text = matchNameUserList[matchName].maxHealth;
         updateMatchName = true;
         Debug.Log("Button clicked! " + matchName);
     }
@@ -268,16 +299,20 @@ public class MatchController : MonoBehaviour {
     ///</summary>
     ///
     void c_OnMatchData(object src, NMatchDataEventArgs args)
-    {
-        int opCode = Convert.ToInt32(args.Data.OpCode);
-        string dataValue = Encoding.ASCII.GetString(args.Data.Data);
+    {        
+        opCode = Convert.ToInt32(args.Data.OpCode);
+        dataValue = Encoding.ASCII.GetString(args.Data.Data);
+        Debug.Log("Retrieved Match Data:: opCode: " + opCode + " data: " + dataValue);
+
+        dataRecieved = true;
     }
 
     void c_OnMatchPresence(object source, NMatchPresenceEventArgs args)
     {
         if(args.MatchPresence.Leave.Count > 0)
         {
-            GameManager.Singleton.UpdateInfoFlashPanelMessage("Opponenet has left. You win!!!");
+            Debug.Log("Opponent Quit the match!");
+            opponentQuit = true;
         }
     }
 
@@ -289,11 +324,16 @@ public class MatchController : MonoBehaviour {
         var chatJson = JsonUtility.FromJson<MatchRoomClass>(bytesAsString);
         Guid tempMatchID = new Guid(chatJson.matchIDGUID);
 
+        MatchSettings newSettings = new MatchSettings();
+        newSettings.matchCreator = chatJson.userName;
+        newSettings.maxHealth = chatJson.matchMaxHealth;
+
+
         if (chatJson.addRemove == "add")
         {
             Debug.Log("Adding match");
             matchNameByteList.Add(chatJson.matchName, tempMatchID.ToByteArray());
-            matchNameUserList.Add(chatJson.matchName, chatJson.userName);
+            matchNameUserList.Add(chatJson.matchName, newSettings);
             Debug.Log("Added match matchNameByteList.Count: " + matchNameByteList.Count + " matchNameUserList.Count: " + matchNameUserList.Count);
             updateEvent.Set();
         } else
@@ -336,11 +376,14 @@ public class MatchController : MonoBehaviour {
     /// <summary>
     /// opCodes:
     /// 0 Joined
-    /// 1 Card Drawn
-    /// 2 Attack
+    /// 1 Player 1 turn
+    /// 2 Player 2 turn
+    /// 3 Card Drawn(by whoever sent this)
+    /// 4 Attack(by whoever sent this)
     /// </summary>
     public void SendMatchData(int opCode, string dataString)
     {
+        Debug.Log("Sending Match Data:: opCode: " + opCode + " datastring: " + dataString);
         byte[] data = Encoding.ASCII.GetBytes(dataString);
         var message = NMatchDataSendMessage.Default(matchID, opCode, data);
         client.Send(message, (bool complete) =>
@@ -352,17 +395,28 @@ public class MatchController : MonoBehaviour {
     }
     private void ReadSentData(int opCodeRetrieved, string dataRetrieved)
     {
+        Debug.Log("Reading Recieved Match Data:: :: opCodeRetrieved: " + opCodeRetrieved + " dataRetrieved: " + dataRetrieved);
         switch (opCodeRetrieved)
         {
             case 0:
                 GameManager.Singleton.OpponentJoined(dataRetrieved);
                 break;
             case 1:
-                GameManager.Singleton.OpponentDrawCard();
+                GameManager.Singleton.NewTurn(1);
                 break;
             case 2:
-                string[] values = dataRetrieved.Split(':'); //Split data which will be "<cardNum>,<suiteName>"
-                GameManager.Singleton.OpponentAttack(Convert.ToInt32(values[0]), values[1]);
+                GameManager.Singleton.NewTurn(2);
+                break;
+            case 3:
+                int totalDrawn = Convert.ToInt32(dataRecieved);
+                GameManager.Singleton.OpponentDrawCard();
+                break;
+            case 4:
+                string[] values = dataRetrieved.Split(':'); //Split data which will be "<cardNum>:<suiteName>"
+                GameManager.Singleton.OpponentAttack(Convert.ToInt32(values[0]), Convert.ToInt32(values[1]));
+                break;
+            default:
+                Debug.Log("OpCode out of range: " + opCodeRetrieved);
                 break;
         }
     }
