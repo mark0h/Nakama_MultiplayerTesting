@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
+using Random = UnityEngine.Random;
 
 public enum GameState
 {
@@ -25,6 +26,7 @@ namespace MGR.Creations
         public Transform BlockActionPanel;
         private CanvasGroup InfoFlashCG;
         public Transform cardSlotPrefab;
+        public Button quitGameButton;
 
         [Header("GameOver Panel")]
         public Transform EndGameResultsPanel;
@@ -50,6 +52,8 @@ namespace MGR.Creations
 
         //Gameplay variables
         private int currentRound = 1;
+        private string opponentName;
+        private int playerNumber;              //1 for match creator, 2 for match joiner(for turn rotation)
 
         private bool gameTesting = false;
 
@@ -82,20 +86,45 @@ namespace MGR.Creations
 
         }
 
-        public void UpdateOpponent(string opponent)
+        public void OpponentJoined(string opponent)
         {
-            opponentNameText.text = opponent;
+            opponentName = opponent;
+            opponentNameText.text = opponentName;
+
+            //Determine who goes first
+            int firstTurn = Random.Range(1, 3);
+            if(firstTurn == 1)
+            {
+                //This player will start
+            } else
+            {
+                //Opponent Starts first turn
+            }
+
         }
 
-        //public void ToggleGamePlayPanel(bool showPanel)
-        //{
-        //    GamePlayPanel.gameObject.SetActive(showPanel);
-        //}
+        public void NewTurn(int whoseTurn)
+        {
+            //Is it this player's turn?
+            if(playerNumber == whoseTurn)
+            {
+
+            } else
+            {
+
+            }
+        }
+
+        private void ToggleGamePlay(bool playable)
+        {
+            BlockActionPanel.gameObject.SetActive(playable);
+        }
 
         //When a new game is created or joined
         public void StartNewGamePlay(string gameName, int startingHealth, string opponent = "")
         {
             GamePlayPanel.gameObject.SetActive(true);
+            quitGameButton.interactable = true;
 
             Debug.Log("Starting a NEW GAME PLAY");
 
@@ -108,9 +137,15 @@ namespace MGR.Creations
             opponentNameText.text = opponent;
 
             if (opponent == "")
+            {
                 InfoFlashPanel.GetComponentInChildren<Text>().text = "You Have created a new game: " + gameName;
+                playerNumber = 1;   //Match creator always player 1
+            }
             else
+            {
                 InfoFlashPanel.GetComponentInChildren<Text>().text = "You Have joined a new game: " + gameName;
+                playerNumber = 2;   //Match joiner always player 2
+            }
 
              StartCoroutine(ShowInfoFlashPanel());
 
@@ -125,13 +160,14 @@ namespace MGR.Creations
             Deck.Singleton.ShuffleCards();
 
 
-            BlockActionPanel.gameObject.SetActive(false);
+            ToggleGamePlay(false);
         }
 
         public void QuitCurrentGameMatch(string endGameText)
         {
             EndGameResultsPanel.gameObject.SetActive(true);
-            BlockActionPanel.gameObject.SetActive(true);
+            ToggleGamePlay(true);
+            quitGameButton.interactable = false;
 
             Text endGameInfo = EndGameResultsPanel.FindChild("EndGameInfoText").GetComponent<Text>();
             Text playerNameText = EndGamePlayerPanel.FindChild("PlayerNameText").GetComponent<Text>();
@@ -159,7 +195,7 @@ namespace MGR.Creations
         public void CloseEndGameResultsPanel()
         {
             EndGameResultsPanel.gameObject.SetActive(false);
-            BlockActionPanel.gameObject.SetActive(false);
+            ToggleGamePlay(false);
             GamePlayPanel.gameObject.SetActive(false);
         }
 
@@ -211,9 +247,37 @@ namespace MGR.Creations
             }
         }
 
+        public void OpponentDrawCard()
+        {
+            Transform cardTransform = Instantiate(cardSlotPrefab);
+            Image cardImageTransform = cardTransform.FindChild("CardImage").GetComponent<Image>();
+            cardImageTransform.GetComponentInChildren<Image>().sprite = Resources.Load<Sprite>("PlayingCards/cardBack_blue");
+            cardTransform.SetParent(oppCardsPanel);
+        }
+
+        public void OpponentAttack(int attackCard, string attackSuite)
+        {
+            int suiteNumber = GetSuiteNumber(attackSuite);
+            CardConstants.Card card = (CardConstants.Card)attackCard;
+            CardConstants.Suite suite = (CardConstants.Suite)suiteNumber;
+            CardValue cardValue = new CardValue(card, suite);
+
+            StartCoroutine(ShowDamage(playerDamageCG));
+            GameData.Singleton.PlayerHealth -= attackCard;
+            GameData.Singleton.OpponentScore += (attackCard * 10) / currentRound;
+            if (GameData.Singleton.PlayerHealth < 1)
+            {
+                PlayerDied();
+            }
+
+            //After attack, you can now play
+            ToggleGamePlay(true);
+        }
+
         public void PlayerDied()
         {
             GameData.Singleton.OpponentScore += 100;
+            QuitCurrentGameMatch(NakamaData.Singleton.ClientUserName + " has won the match!");
             //THIS WILL ALSO SEND A MESSAGE TO OPPONENET ABOUT THIS
         }
 

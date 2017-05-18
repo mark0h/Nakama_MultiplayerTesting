@@ -47,7 +47,6 @@
   </ItemGroup>
   <ItemGroup>
      <Compile Include="Assets\MyProject\Scripts\CardScripts\CardConstants.cs" />
-     <Compile Include="Assets\MyProject\Scripts\CardScripts\CardImage.cs" />
      <Compile Include="Assets\MyProject\Scripts\CardScripts\CardValue.cs" />
      <Compile Include="Assets\MyProject\Scripts\CardScripts\Deck.cs" />
      <Compile Include="Assets\MyProject\Scripts\CardScripts\DragAndDropCell.cs" />

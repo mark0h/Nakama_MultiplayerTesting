@@ -269,7 +269,8 @@ public class MatchController : MonoBehaviour {
     ///
     void c_OnMatchData(object src, NMatchDataEventArgs args)
     {
-        
+        int opCode = Convert.ToInt32(args.Data.OpCode);
+        string dataValue = Encoding.ASCII.GetString(args.Data.Data);
     }
 
     void c_OnMatchPresence(object source, NMatchPresenceEventArgs args)
@@ -332,8 +333,15 @@ public class MatchController : MonoBehaviour {
         client.OnTopicMessage -= MatchList_OnTopicMessage;
     }
 
-    public void SendMatchData(int opCode, byte[] data)
+    /// <summary>
+    /// opCodes:
+    /// 0 Joined
+    /// 1 Card Drawn
+    /// 2 Attack
+    /// </summary>
+    public void SendMatchData(int opCode, string dataString)
     {
+        byte[] data = Encoding.ASCII.GetBytes(dataString);
         var message = NMatchDataSendMessage.Default(matchID, opCode, data);
         client.Send(message, (bool complete) =>
         {
@@ -341,6 +349,22 @@ public class MatchController : MonoBehaviour {
         }, (INError error) => {
             Debug.LogErrorFormat("Could not send data to match: '{0}'.", error.Message);
         });
+    }
+    private void ReadSentData(int opCodeRetrieved, string dataRetrieved)
+    {
+        switch (opCodeRetrieved)
+        {
+            case 0:
+                GameManager.Singleton.OpponentJoined(dataRetrieved);
+                break;
+            case 1:
+                GameManager.Singleton.OpponentDrawCard();
+                break;
+            case 2:
+                string[] values = dataRetrieved.Split(':'); //Split data which will be "<cardNum>,<suiteName>"
+                GameManager.Singleton.OpponentAttack(Convert.ToInt32(values[0]), values[1]);
+                break;
+        }
     }
 
     public void ChangeMaxHealthText()
