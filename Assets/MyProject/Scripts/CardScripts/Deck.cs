@@ -24,21 +24,39 @@ public static class Shuffling
 
 public class Deck : MonoBehaviour {
 
+    public static Deck Singleton;
+
     public List<CardValue> deckCards = new List<CardValue>();
     public List<CardValue> inPlayCards = new List<CardValue>();
     public List<CardValue> playedCards = new List<CardValue>();
 
-	// Create a new deck adding all 52 cards from CardConstants in it
-	void Start ()
+    void Start()
     {
-		foreach(var card in CardConstants.Cards)
+        Singleton = this;
+
+        foreach (var card in CardConstants.Cards)
         {
-            foreach(var suite in CardConstants.Suites)
+            foreach (var suite in CardConstants.Suites)
             {
                 deckCards.Add(new CardValue(card, suite));
             }
         }
-	}
+        ShuffleCards();
+    }
+
+	// Create a new deck adding all 52 cards from CardConstants in it
+	//public void StartNewDeck ()
+ //   {
+ //       Debug.Log("Deck Awake()");
+	//	foreach(var card in CardConstants.Cards)
+ //       {
+ //           foreach(var suite in CardConstants.Suites)
+ //           {
+ //               deckCards.Add(new CardValue(card, suite));
+ //           }
+ //       }
+ //       ShuffleCards();
+ //   }
 	
 	// Update is called once per frame
 	void Update () {
@@ -53,6 +71,7 @@ public class Deck : MonoBehaviour {
     public CardValue DrawCard()
     {
         int cardSelect = deckCards.Count - 1;
+        Debug.Log("CardSelect Index value: " + cardSelect);
 
         CardValue cardSelected = deckCards[cardSelect];
         deckCards.RemoveAt(cardSelect);
@@ -61,8 +80,9 @@ public class Deck : MonoBehaviour {
         return cardSelected;
     }
 
-    public void DiscardPlayedCard(int cardIndex)
+    public void DiscardPlayedCard(CardValue cardPlayed)
     {
+        int cardIndex = inPlayCards.IndexOf(cardPlayed);
         CardValue cardDiscarded = inPlayCards[cardIndex];
         inPlayCards.RemoveAt(cardIndex);
         playedCards.Add(cardDiscarded);
@@ -81,8 +101,12 @@ public class Deck : MonoBehaviour {
         playedCards.Clear();
 
         Debug.Log("deckCards.Count: " + deckCards.Count + " inPlayCards.Count: " + inPlayCards.Count + " playedCards.Count: " + playedCards.Count);
-
     }
+
+    //public CardValue GetCardValue(CardConstants.Card card, CardConstants.Suite suite)
+    //{
+
+    //}
 
     
 }

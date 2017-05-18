@@ -5,9 +5,11 @@ using UnityEngine;
 public class CardConstants : MonoBehaviour {
 
     //(int)Card.Ace   will return 11
+    //int value = 11;
+    //Card card = (Card)value;  will return Card.Ace
     public enum Card
     {
-        Ace = 11,
+        Ace = 1,
         Two = 2,
         Three = 3,
         Four = 4,
@@ -18,16 +20,16 @@ public class CardConstants : MonoBehaviour {
         Nine = 9,
         Ten = 10,
         Jack = 11,
-        Queen = 11,
-        King = 11
+        Queen = 12,
+        King = 13
     };
 
     public enum Suite
     {
-        Clubs,
-        Spades,
-        Hearts,
-        Diamonds
+        Clubs = 1,
+        Spades = 2,
+        Hearts = 3,
+        Diamonds = 4
     }
 
     public static readonly Card[] Cards =

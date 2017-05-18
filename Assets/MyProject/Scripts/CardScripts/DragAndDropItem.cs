@@ -27,12 +27,13 @@ public class DragAndDropItem : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         draggedItem = this;                                                         // Set as dragged item
         icon = new GameObject("Icon");                                              // Create object for item's icon
         Image image = icon.AddComponent<Image>();
-        image.sprite = GetComponent<Image>().sprite;
+        image.sprite = draggedItem.GetComponent<Image>().sprite;
         image.raycastTarget = false;                                                // Disable icon's raycast for correct drop handling
         RectTransform iconRect = icon.GetComponent<RectTransform>();
         // Set icon's dimensions
-        iconRect.sizeDelta = new Vector2(   GetComponent<RectTransform>().sizeDelta.x,
-                                            GetComponent<RectTransform>().sizeDelta.y);
+        //iconRect.sizeDelta = new Vector2(   GetComponent<RectTransform>().sizeDelta.x,
+        //                                    GetComponent<RectTransform>().sizeDelta.y);
+        iconRect.sizeDelta = new Vector2(96, 140);
         Canvas canvas = GetComponentInParent<Canvas>();                             // Get parent canvas
         if (canvas != null)
         {
@@ -54,6 +55,7 @@ public class DragAndDropItem : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     {
         if (icon != null)
         {
+            Debug.Log("Dragging icon");
             icon.transform.position = Input.mousePosition;                          // Item's icon follows to cursor
         }
     }

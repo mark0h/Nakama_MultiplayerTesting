@@ -34,6 +34,8 @@ public class MatchController : MonoBehaviour {
     public InputField createdMatchNameInput;
     private string createdMatchNameString;
     public Text createMatchPanelErrorText;
+    public Slider maxHealthSlider;
+    public Text maxHealthText;
 
     //GameObject Match List Panel
     [Header("Match List Panel")]
@@ -50,7 +52,7 @@ public class MatchController : MonoBehaviour {
     private bool updateMatchName = false;
 
     //TEMP DEBUGGIN
-    private byte[] testByte = { 1, 2, 3 };
+    //private byte[] testByte = { 1, 2, 3 };
 
     // Use this for initialization
     void Start ()
@@ -113,7 +115,7 @@ public class MatchController : MonoBehaviour {
         SendMatchInfoToMatchRoom("add");
         SendMessages.Singleton.LeaveRoom();
         SendMessages.Singleton.JoinRoom(matchName);
-        GameManager.Singleton.StartNewGamePlay(createdMatchNameInput.text);
+        GameManager.Singleton.StartNewGamePlay(createdMatchNameInput.text, Convert.ToInt32(maxHealthSlider.value));
     }
 
 
@@ -205,7 +207,7 @@ public class MatchController : MonoBehaviour {
         SendMatchInfoToMatchRoom("remove");
         SendMessages.Singleton.LeaveRoom();
         SendMessages.Singleton.JoinRoom(matchName);
-        GameManager.Singleton.StartNewGamePlay(matchName, opponentName);
+        GameManager.Singleton.StartNewGamePlay(matchName, Convert.ToInt32(maxHealthSlider.value), opponentName);
     }
 
     public void QuitMatch()
@@ -339,5 +341,10 @@ public class MatchController : MonoBehaviour {
         }, (INError error) => {
             Debug.LogErrorFormat("Could not send data to match: '{0}'.", error.Message);
         });
+    }
+
+    public void ChangeMaxHealthText()
+    {
+        maxHealthText.text = maxHealthSlider.value.ToString();
     }
 }

@@ -273,4 +273,10 @@ public class ConnectToServer : MonoBehaviour {
         UserListPanel.gameObject.SetActive(true);
         MenuPanel.gameObject.SetActive(true);
     }
+
+    public void TestingOnlyNoLogin()
+    {
+        LoginPanel.gameObject.SetActive(false);
+        GameManager.Singleton.GamePlayTesting();        
+    }
 }

@@ -165,6 +165,9 @@ public class DragAndDropCell : MonoBehaviour, IDropHandler
                             desc.destinationCell = this;
                             // Send message with DragAndDrop info to parents GameObjects
                             StartCoroutine(NotifyOnDragEnd(desc));
+
+                            //My Code
+                            MGR.Creations.GameManager.Singleton.AttackwithCard(sourceCell, item);
                             break;
                         default:
                             // Nothing to do
