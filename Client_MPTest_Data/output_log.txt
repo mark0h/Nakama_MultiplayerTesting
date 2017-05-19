@@ -604,3 +604,30 @@ ToggleGamePlay():: :: Setting BlockPanel to : False
  
 (Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
 
+source: NClient(ConnectTimeout=3000,Host=52.27.165.47,Lang=en,Port=7350,ServerKey=defaultkey,SSL=False,Timeout=5000,Trace=False) args.TopicPresence: NTopicPresence(Topic=NTopicId(Id=System.Byte[],Type=Room),Join=System.Collections.Generic.List`1[Nakama.INUserPresence],Leave=System.Collections.Generic.List`1[Nakama.INUserPresence])
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+USER LEFT:: ::chatUsersLeftID.Count: 1
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+source: NClient(ConnectTimeout=3000,Host=52.27.165.47,Lang=en,Port=7350,ServerKey=defaultkey,SSL=False,Timeout=5000,Trace=False) args.TopicPresence: NTopicPresence(Topic=NTopicId(Id=System.Byte[],Type=Room),Join=System.Collections.Generic.List`1[Nakama.INUserPresence],Leave=System.Collections.Generic.List`1[Nakama.INUserPresence])
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+USER LEFT:: ::chatUsersLeftID.Count: 2
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Opponent Quit the match!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+ToggleGamePlay():: :: Setting BlockPanel to : True
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Setting up 2 worker threads for Enlighten.
+  Thread -> id: b1c4 -> priority: 1 
+  Thread -> id: 6c94 -> priority: 1 
