@@ -23,7 +23,9 @@ public class MatchRoomClass
 public class MatchSettings
 {
     public string matchCreator;
+    public string matchName;
     public string maxHealth;
+    public string matchStatus;  //carry value of "open" or "closed"
 }
 
 public class MatchController : MonoBehaviour {
@@ -33,8 +35,8 @@ public class MatchController : MonoBehaviour {
     private INClient client;
     private INTopicId matchListTopic;
     private INMatch matchValues;
-    private Dictionary<string, byte[]> matchNameByteList = new Dictionary<string, byte[]>();
-    private Dictionary<string, MatchSettings> matchNameUserList = new Dictionary<string, MatchSettings>();
+    private Dictionary<string, Guid> matchNameMatchGuid = new Dictionary<string, Guid>();
+    private Dictionary<Guid, MatchSettings> matchGuidMatchSettings = new Dictionary<Guid, MatchSettings>();
 
     //GameObjects Create Match Panel
     [Header("Create Match Panel")]
@@ -76,6 +78,8 @@ public class MatchController : MonoBehaviour {
         createMatchPanel.gameObject.SetActive(false);
         opponentName.text = "";
 
+        //Fix when Match System comes out. For now, remove previous games this player created and may have disconnected
+        DestroyLastMatchCreated();
     }
 	
 	// Update is called once per frame
@@ -140,6 +144,7 @@ public class MatchController : MonoBehaviour {
         createEvent.WaitOne(5000, false);
         createMatchPanel.gameObject.SetActive(false);
         SendMatchInfoToMatchRoom("add", Convert.ToInt32(maxHealthSlider.value));
+        PlayerPrefs.SetString("MatchCreated", new Guid(matchID).ToString());
         SendMessages.Singleton.LeaveRoom();
         SendMessages.Singleton.JoinRoom(matchName);
         GameManager.Singleton.StartNewGamePlay(createdMatchNameInput.text, Convert.ToInt32(maxHealthSlider.value));
@@ -171,6 +176,82 @@ public class MatchController : MonoBehaviour {
         joinEvent.WaitOne(1000, false);
         RegisterMatchListRoom();
     }
+
+    private void GetPreviousMatchesFromRoom()
+    {
+        ManualResetEvent historyEvent = new ManualResetEvent(false);
+
+        client = NakamaData.Singleton.Client;
+        byte[] roomByte = Encoding.UTF8.GetBytes("match-list");
+        IList<INTopicMessage> msgsReturned = null;
+
+        var message = new NTopicMessagesListMessage.Builder()
+            .TopicRoom(roomByte)
+            .Forward(false)
+            .Limit(100)
+            .Build();
+
+        client.Send(message, (INResultSet<INTopicMessage> msgs) =>
+        {
+            // Each message in the result set is a `INTopicMessage` identical
+            // to messages received through `OnTopicMessage` realtime delivery.
+            msgsReturned = msgs.Results;
+            Debug.Log("Successfully listed messages from topic. msgs.Results.Count: " + msgs.Results.Count + " msgsReturned.Count: " + msgsReturned.Count);
+            historyEvent.Set();
+        }, (INError error) => {
+            Debug.LogErrorFormat("Could not list messages from topic: '{0}'.", error.Message);
+            historyEvent.Set();
+        });
+        historyEvent.WaitOne(1000, false);
+
+        if (msgsReturned.Count < 1)
+            return;
+
+        //GO through the messages as if they were just recieved
+        foreach (INTopicMessage topicMessage in msgsReturned)
+        {
+
+            Debug.Log("topicMessage.Data.ToString(): " + topicMessage.Data.ToString());
+            var bytesAsString = Encoding.ASCII.GetString(topicMessage.Data);
+            var chatJson = JsonUtility.FromJson<MatchRoomClass>(bytesAsString);
+            Guid tempMatchID = new Guid(chatJson.matchIDGUID);
+
+            MatchSettings newSettings = new MatchSettings();
+            newSettings.matchCreator = chatJson.userName;
+            newSettings.maxHealth = chatJson.matchMaxHealth;
+            newSettings.matchName = chatJson.matchName;
+
+            if (chatJson.addRemove == "add")
+            {
+                Debug.Log("Adding previous match: " + chatJson.matchName);
+                newSettings.matchStatus = "open";
+                //matchNameMatchGuid.Add(chatJson.matchName, tempMatchID.ToByteArray());
+                if (matchGuidMatchSettings.ContainsKey(tempMatchID))
+                    return;
+                matchGuidMatchSettings.Add(tempMatchID, newSettings);
+                Debug.Log("Added matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count); //match matchNameMatchGuid.Count: " + matchNameMatchGuid.Count + " matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count);
+            }
+            else
+            {
+                Debug.Log("Removing matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count); //match matchNameMatchGuid.Count: " + matchNameMatchGuid.Count + " matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count);
+                //matchNameMatchGuid.Remove(chatJson.matchName);
+                //matchGuidMatchSettings.Remove(chatJson.matchName);
+                if (matchGuidMatchSettings.ContainsKey(tempMatchID))
+                {
+                    matchGuidMatchSettings[tempMatchID].matchStatus = "closed";
+                }
+                else
+                {
+                    newSettings.matchStatus = "closed";
+                    matchGuidMatchSettings.Add(tempMatchID, newSettings);  //Only reason we add, is so if it comes up again in message
+                }
+                Debug.Log("Removed matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count); //match matchNameMatchGuid.Count: " + matchNameMatchGuid.Count + " matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count);
+            }
+            
+        }
+        
+    }
+
     private void SendMatchInfoToMatchRoom(string addRemove, int maxHealth)
     {
         client = NakamaData.Singleton.Client;
@@ -199,13 +280,25 @@ public class MatchController : MonoBehaviour {
     //Called when "Join Game" button on game menu is pressed
     public void SetupMatchListPanel()
     {
-        //Add Buttons of Current matches
-        foreach (var pair in matchNameUserList)
+        //First clear any matches listed, in case this fool clicks the "Join Match" when window is already open!! 
+        foreach (Transform child in matchListScrollContent)
         {
-            GameObject newButton = Instantiate(buttonPrefab);
-            newButton.transform.SetParent(matchListScrollContent);
-            newButton.transform.name = pair.Key;
-            newButton.transform.GetComponentInChildren<Text>().text = pair.Key;
+            GameObject.Destroy(child.gameObject);
+        }
+
+        matchNameMatchGuid.Clear();
+        GetPreviousMatchesFromRoom();  //Try to fetch any previous matches from before joined
+        //Add Buttons of Current matches
+        foreach (var pair in matchGuidMatchSettings)
+        {            
+            if (pair.Value.matchStatus == "open")
+            {
+                matchNameMatchGuid.Add(pair.Value.matchName, pair.Key);
+                GameObject newButton = Instantiate(buttonPrefab);
+                newButton.transform.SetParent(matchListScrollContent);
+                newButton.transform.name = pair.Value.matchName;
+                newButton.transform.GetComponentInChildren<Text>().text = pair.Value.matchName;
+            }            
         }
 
         matchListPanel.gameObject.SetActive(true);
@@ -219,9 +312,9 @@ public class MatchController : MonoBehaviour {
         RegisterOnMatchData();
 
         ManualResetEvent joinEvent = new ManualResetEvent(false);
-        matchID = matchNameByteList[matchName];
-        string opponentName = matchNameUserList[matchName].matchCreator;
-        string maxHealth = matchNameUserList[matchName].maxHealth;
+        matchID = matchNameMatchGuid[matchName].ToByteArray();
+        string opponentName = matchGuidMatchSettings[matchNameMatchGuid[matchName]].matchCreator;
+        string maxHealth = matchGuidMatchSettings[matchNameMatchGuid[matchName]].maxHealth;
         client = NakamaData.Singleton.Client;
         client.Send(NMatchJoinMessage.Default(matchID), (INMatch match) =>
         {
@@ -265,10 +358,25 @@ public class MatchController : MonoBehaviour {
     public void MatchListButtonPressed()
     {
         matchName = EventSystem.current.currentSelectedGameObject.name;
-        opponentName.text = matchNameUserList[matchName].matchCreator;
-        maxHealth.text = matchNameUserList[matchName].maxHealth;
+        matchID = matchNameMatchGuid[matchName].ToByteArray();
+        opponentName.text = matchGuidMatchSettings[matchNameMatchGuid[matchName]].matchCreator;
+        maxHealth.text = matchGuidMatchSettings[matchNameMatchGuid[matchName]].maxHealth;
         updateMatchName = true;
         Debug.Log("Button clicked! " + matchName);
+    }
+
+    private void DestroyLastMatchCreated()
+    {
+        Debug.Log("DestroyLastMatchCreated():: PlayerPrefs.GetString(\"MatchCreated\"): " + PlayerPrefs.GetString("MatchCreated"));
+        if(PlayerPrefs.GetString("MatchCreated").Length > 0)
+        {
+            Guid tempMatchID = new Guid(PlayerPrefs.GetString("MatchCreated"));
+            matchID = tempMatchID.ToByteArray();
+            SendMatchInfoToMatchRoom("remove", 0);
+            PlayerPrefs.SetString("MatchCreated", "");
+        }
+        
+
     }
 
     //Called when "Create Match" button on game menu is pressed
@@ -327,21 +435,24 @@ public class MatchController : MonoBehaviour {
         MatchSettings newSettings = new MatchSettings();
         newSettings.matchCreator = chatJson.userName;
         newSettings.maxHealth = chatJson.matchMaxHealth;
+        //newSettings.matchGuid = new Guid(chatJson.matchIDGUID);
 
 
         if (chatJson.addRemove == "add")
         {
             Debug.Log("Adding match");
-            matchNameByteList.Add(chatJson.matchName, tempMatchID.ToByteArray());
-            matchNameUserList.Add(chatJson.matchName, newSettings);
-            Debug.Log("Added match matchNameByteList.Count: " + matchNameByteList.Count + " matchNameUserList.Count: " + matchNameUserList.Count);
+            newSettings.matchStatus = "open";
+            //matchNameMatchGuid.Add(chatJson.matchName, tempMatchID.ToByteArray());
+            matchGuidMatchSettings.Add(tempMatchID, newSettings);
+            Debug.Log("Added matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count); //match matchNameMatchGuid.Count: " + matchNameMatchGuid.Count + " matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count);
             updateEvent.Set();
         } else
         {
-            Debug.Log("Removing match matchNameByteList.Count: " + matchNameByteList.Count + " matchNameUserList.Count: " + matchNameUserList.Count);
-            matchNameByteList.Remove(chatJson.matchName);
-            matchNameUserList.Remove(chatJson.matchName);
-            Debug.Log("Removed match matchNameByteList.Count: " + matchNameByteList.Count + " matchNameUserList.Count: " + matchNameUserList.Count);
+            Debug.Log("Removing matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count); //match matchNameMatchGuid.Count: " + matchNameMatchGuid.Count + " matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count);
+            //matchNameMatchGuid.Remove(chatJson.matchName);
+            matchGuidMatchSettings[tempMatchID].matchStatus = "closed";
+            //matchGuidMatchSettings.Remove(chatJson.matchName);
+            Debug.Log("Removed matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count); //match matchNameMatchGuid.Count: " + matchNameMatchGuid.Count + " matchGuidMatchSettings.Count: " + matchGuidMatchSettings.Count);
             updateEvent.Set();
         }
         updateEvent.WaitOne(1000, false);
@@ -364,13 +475,13 @@ public class MatchController : MonoBehaviour {
     public void RegisterMatchListRoom()
     {
         client = NakamaData.Singleton.Client;
-        client.OnTopicMessage += MatchList_OnTopicMessage;
+        //client.OnTopicMessage += MatchList_OnTopicMessage;
     }
 
     public void UnRegisterMatchListRoom()
     {
         client = NakamaData.Singleton.Client;
-        client.OnTopicMessage -= MatchList_OnTopicMessage;
+        //client.OnTopicMessage -= MatchList_OnTopicMessage;
     }
 
     /// <summary>
@@ -380,6 +491,7 @@ public class MatchController : MonoBehaviour {
     /// 2 Player 2 turn
     /// 3 Card Drawn(by whoever sent this)
     /// 4 Attack(by whoever sent this)
+    /// 5 current turn
     /// </summary>
     public void SendMatchData(int opCode, string dataString)
     {

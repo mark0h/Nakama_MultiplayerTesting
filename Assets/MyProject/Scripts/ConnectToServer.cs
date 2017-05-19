@@ -178,7 +178,7 @@ public class ConnectToServer : MonoBehaviour {
 
         ServerIP = serverIPInputField.text;
 
-        ClientBuilder();
+        ClientBuilder(); //Build the Nakama client object
 
         deviceID = userNameInputField.text;
         Debug.Log("Logging in as: " + deviceID + " to IP: " + ServerIP);
